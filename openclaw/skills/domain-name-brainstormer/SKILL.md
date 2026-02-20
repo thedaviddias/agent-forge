@@ -1,7 +1,7 @@
 ---
 name: domain-name-brainstormer
 version: 2.0
-description: Generates creative, research-backed domain name ideas and checks availability. Now with competitor analysis, pattern recognition, and quality scoring.
+description: Generates creative, research-backed domain name ideas and checks availability with competitor analysis, pattern recognition, and quality scoring. Use when brainstorming brandable domains for a product or project.
 ---
 
 # Domain Name Brainstormer v2

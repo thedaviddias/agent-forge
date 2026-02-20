@@ -1,6 +1,6 @@
 ---
-name: react:components
-description: Converts Stitch designs into modular Vite and React components using system-level networking and AST-based validation.
+name: react-components
+description: Converts Stitch designs into modular Vite and React components with system-level networking and AST-based validation. Use when translating design exports into production-ready React component architecture.
 allowed-tools:
   - "stitch*:*"
   - "Bash"

@@ -1,6 +1,6 @@
 ---
 name: 1password-cli
-description: Use this skill when working with the 1Password CLI (`op` command) for secrets management, retrieving API keys, injecting secrets into development environments, or any task involving 1Password vault operations. Triggers on: "1password", "op command", "secrets management", "api keys from vault", "op run", "op read", "service account token".
+description: Use when working with the 1Password CLI (`op` command) for secrets management, retrieving API keys, injecting secrets into development environments, or any task involving 1Password vault operations. Triggers on: "1password", "op command", "secrets management", "api keys from vault", "op run", "op read", "service account token".
 ---
 
 # 1Password CLI Skill

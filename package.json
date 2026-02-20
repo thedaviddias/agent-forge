@@ -6,7 +6,10 @@
   "packageManager": "pnpm@9.14.2",
   "scripts": {
     "validate-skills": "node scripts/validate-skills.mjs",
-    "scan:secrets": "gitleaks-secret-scanner --verbose -c .gitleaks.toml"
+    "scan:secrets": "gitleaks-secret-scanner --verbose -c .gitleaks.toml",
+    "check:links": "node scripts/check-markdown-links.mjs",
+    "report:skills": "node scripts/skill-health-report.mjs",
+    "validate:all": "node scripts/validate-skills.mjs && node scripts/check-markdown-links.mjs && pnpm run scan:secrets"
   },
   "devDependencies": {
     "gitleaks-secret-scanner": "^2.1.1"

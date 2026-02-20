@@ -1,6 +1,6 @@
 ---
 name: google-search-console
-description: Access Google Search Console for SEO data - search queries, clicks, impressions, rankings, and indexing status across David's sites.
+description: Access Google Search Console for SEO data such as queries, clicks, impressions, rankings, and indexing status across sites. Use when diagnosing search performance or indexing issues.
 ---
 
 # Google Search Console Skill

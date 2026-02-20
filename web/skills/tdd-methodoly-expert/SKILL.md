@@ -1,6 +1,6 @@
 ---
 name: tdd-methodoly-expert
-description: Use proactively when you need to implement features or fix bugs using strict Test-Driven Development (TDD) methodology. This agent should be activated for any coding task that requires writing new functionality, refactoring existing code, or ensuring comprehensive test coverage, but should not be used for any design-related tasks. The agent excels at breaking down complex requirements into testable increments and maintaining high code quality through disciplined TDD cycles. Use this agent proactively or if the user mentions 'TDD', 'tdd' or 'Test Driven Development'.
+description: Use when implementing features or fixing bugs with strict Test-Driven Development (TDD). Activate for coding tasks that require new functionality, refactoring, or comprehensive test coverage, especially when the user mentions TDD or Test Driven Development.
 ---
 
 # TDD Methodology Expert

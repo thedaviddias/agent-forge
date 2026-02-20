@@ -57,7 +57,7 @@ Sources: [Codex skills](https://developers.openai.com/codex/skills), [AGENTS.md]
 
 5. **Use subfolders so SKILL.md stays short**
    Put long content in subfolders and link from `SKILL.md`; tools load them only when the skill references them.
-   - **references/** — Deep docs, guides, examples, reference tables. Link from SKILL.md (e.g. `See [references/guide.md](references/guide.md)`).
+   - **references/** — Deep docs, guides, examples, reference tables. Link from SKILL.md (e.g. `See references/guide.md`).
    - **scripts/** — Runnable helpers (CLI, validation, one-off scripts). Refer to them in instructions (e.g. `Run scripts/validate.sh`).
    - **assets/** — Static files (images, data, schemas). Reference when the skill needs them.
    - **templates/** — Document or code templates the agent fills in.
@@ -124,15 +124,24 @@ You can combine with `--no-strict` or `--lenient`; validation still runs and exi
 
 Use the report to find skills to refactor (move content to `references/`) or to track size over time (e.g. pipe `--report=json` to a file and diff).
 
-### Outcome evals
+### Skill health dashboard
 
-To measure whether a skill **improves agent behavior** (outcome efficiency), use the **outcome evals** in `scripts/evals/`. Each eval is a prompt plus a deterministic verifier (no LLM-as-judge). Run from repo root:
+To generate a repository-level skill health snapshot (JSON + Markdown):
 
 ```bash
-ANTHROPIC_API_KEY=... node scripts/run-skill-evals.mjs [--eval id] [--report-dir path]
+node scripts/skill-health-report.mjs
 ```
 
-See [scripts/evals/README.md](scripts/evals/README.md) for the eval format, how to add evals, and how to interpret the report.
+This writes:
+
+- `reports/skills-health.json`
+- `docs/SKILL-HEALTH.md`
+
+The health report includes per-skill description length, body lines, token estimate, warning/error counts, and broken local links.
+
+### Outcome evals
+
+This repository currently does not ship a built-in outcome-eval runner. If you add one, keep it deterministic and repository-local (prompt fixtures + verifiers checked into source control) so improvements can be measured over time.
 
 The pre-commit hook runs `node scripts/validate-skills.mjs` (strict by default), so new or edited skills must stay under 500 lines (or be added to the allowlist temporarily). Fix any reported errors and re-run until it passes.
 

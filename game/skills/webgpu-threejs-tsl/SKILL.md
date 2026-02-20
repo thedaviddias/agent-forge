@@ -1,6 +1,6 @@
 ---
 name: webgpu-threejs-tsl
-description: Comprehensive guide for developing WebGPU-enabled Three.js applications using TSL (Three.js Shading Language). Covers WebGPU renderer setup, TSL syntax and node materials, compute shaders, post-processing effects, and WGSL integration. Use this skill when working with Three.js WebGPU, TSL shaders, node materials, or GPU compute in Three.js.
+description: Comprehensive guide for developing WebGPU-enabled Three.js applications using TSL (Three.js Shading Language). Covers WebGPU renderer setup, node materials, compute shaders, post-processing, and WGSL integration. Use when working with Three.js WebGPU, TSL shaders, or GPU compute pipelines.
 ---
 
 # WebGPU Three.js with TSL

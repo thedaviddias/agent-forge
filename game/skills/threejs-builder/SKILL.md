@@ -1,9 +1,6 @@
 ---
 name: threejs-builder
-description: >
-  Creates simple Three.js web apps with scene setup, lighting, geometries, materials,
-  animations, and responsive rendering. Use for: "Create a threejs scene/app/showcase"
-  or when user wants 3D web content. Supports ES modules, modern Three.js r150+ APIs.
+description: Builds simple Three.js web apps with scene setup, lighting, geometry, materials, animation, and responsive rendering. Use when creating or prototyping 3D web scenes with modern Three.js (r150+).
 ---
 
 # Three.js Builder

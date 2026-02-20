@@ -30,6 +30,7 @@ CLEAN=false
 ALL_BUNDLES=false
 PROJECT_DIR=""
 BUNDLES=""
+PROJECT_ONLY=false
 WITH_MCP=false
 WITH_RULES=false
 WITH_AGENTS=false
@@ -55,6 +56,7 @@ while [[ $# -gt 0 ]]; do
     --bundles=*)
       BUNDLES="${arg#*=}"; shift
       ;;
+    --project-only)   PROJECT_ONLY=true; shift ;;
     --all)            WITH_MCP=true; WITH_RULES=true; WITH_AGENTS=true; WITH_HOOKS=true; WITH_COMMANDS=true; WITH_TASKS=true; shift ;;
     --with-mcp)       WITH_MCP=true; shift ;;
     --with-rules)     WITH_RULES=true; shift ;;
@@ -63,13 +65,14 @@ while [[ $# -gt 0 ]]; do
     --with-commands)  WITH_COMMANDS=true; shift ;;
     --with-tasks)     WITH_TASKS=true; shift ;;
     -h|--help)
-      echo "Usage: $0 [--force] [--dry-run] [--clean] [--all-bundles] [--project DIR --bundles b1,b2] [--all | --with-mcp | ...]"
+      echo "Usage: $0 [--force] [--dry-run] [--clean] [--all-bundles] [--project DIR --bundles b1,b2] [--project-only] [--all | --with-mcp | ...]"
       echo "  --force          Overwrite existing symlinks and replace real directories in ~/.agents/skills (or project dir)"
       echo "  --dry-run        Print actions without creating or changing anything"
       echo "  --clean          Remove skills in ~/.agents/skills (and tool dirs) that are not in the current install set"
       echo "  --all-bundles    Install skills from all bundles globally (default: only global/ bundle)"
       echo "  --project DIR   Install selected bundles into DIR/.cursor/skills (and .claude/skills, .codex/skills)"
       echo "  --bundles b1,b2  Comma-separated bundle names for --project (e.g. web,marketing)"
+      echo "  --project-only   Only run per-project install (skip all global ~/.agents writes)"
       echo "  --all            Install all primitives (skills + rules + MCP + agents + hooks + commands + tasks)"
       echo "  --with-mcp       Also install MCP configs to ~/.agents/mcp.d/ and merge to ~/.agents/mcp.json"
       echo "  --with-rules     Also install bundle rules to ~/.agents/rules/"
@@ -91,56 +94,112 @@ done
 
 FORGE_ROOT="$(abspath "$(dirname "$0")")"
 
+if [[ -n "$PROJECT_DIR" && -z "$BUNDLES" ]]; then
+  echo "Error: --project requires --bundles (e.g. --project . --bundles web,marketing)." >&2
+  exit 1
+fi
+
+if [[ -z "$PROJECT_DIR" && -n "$BUNDLES" ]]; then
+  echo "Error: --bundles requires --project." >&2
+  exit 1
+fi
+
+if [[ "$PROJECT_ONLY" == true ]]; then
+  if [[ -z "$PROJECT_DIR" || -z "$BUNDLES" ]]; then
+    echo "Error: --project-only requires both --project and --bundles." >&2
+    exit 1
+  fi
+  if [[ "$CLEAN" == true || "$ALL_BUNDLES" == true || "$WITH_MCP" == true || "$WITH_RULES" == true || "$WITH_AGENTS" == true || "$WITH_HOOKS" == true || "$WITH_COMMANDS" == true || "$WITH_TASKS" == true ]]; then
+    echo "Error: --project-only cannot be combined with global install flags (--clean, --all-bundles, --all, --with-*)." >&2
+    exit 1
+  fi
+fi
+
+if [[ -n "$BUNDLES" ]]; then
+  CHECK_AVAILABLE_BUNDLES=()
+  for category in "$FORGE_ROOT"/*/; do
+    [[ -d "${category}skills" ]] || continue
+    CHECK_AVAILABLE_BUNDLES+=( "$(basename "$category")" )
+  done
+
+  CHECK_UNKNOWN_BUNDLES=()
+  IFS=',' read -ra CHECK_BUNDLE_LIST <<< "$BUNDLES"
+  for bundle in "${CHECK_BUNDLE_LIST[@]}"; do
+    bundle="${bundle// /}"
+    [[ -z "$bundle" ]] && continue
+    if [[ ! -d "$FORGE_ROOT/$bundle/skills" ]]; then
+      CHECK_UNKNOWN_BUNDLES+=( "$bundle" )
+    fi
+  done
+
+  if [[ ${#CHECK_UNKNOWN_BUNDLES[@]} -gt 0 ]]; then
+    echo ""
+    echo "Unknown bundles requested:"
+    for bundle in "${CHECK_UNKNOWN_BUNDLES[@]}"; do
+      echo "  - $bundle"
+    done
+    echo ""
+    echo "Available bundles:"
+    for bundle in "${CHECK_AVAILABLE_BUNDLES[@]}"; do
+      echo "  - $bundle"
+    done
+    exit 1
+  fi
+fi
+
 # Discover all skills: (skill_name,category) pairs, first category wins if duplicate name
 # Default: only global/ bundle. Use --all-bundles to install every bundle globally.
 SKILL_NAMES=()
 SKILL_CATEGORIES=()
-if [[ "$ALL_BUNDLES" == true ]]; then
-  CATEGORIES_TO_SCAN=("$FORGE_ROOT"/*/)
-else
-  CATEGORIES_TO_SCAN=("$FORGE_ROOT/global/")
-fi
-for category in "${CATEGORIES_TO_SCAN[@]}"; do
-  [ -d "${category}skills" ] || continue
-  for skill_dir in "${category}skills"/*/; do
-    [ -d "$skill_dir" ] || continue
-    [ -f "${skill_dir}SKILL.md" ] || continue
-    skill_name="$(basename "$skill_dir")"
-    for skip in "${SKIP_SKILLS[@]}"; do
-      [[ "$skill_name" == "$skip" ]] && continue 2
+if [[ "$PROJECT_ONLY" != true ]]; then
+  if [[ "$ALL_BUNDLES" == true ]]; then
+    CATEGORIES_TO_SCAN=("$FORGE_ROOT"/*/)
+  else
+    CATEGORIES_TO_SCAN=("$FORGE_ROOT/global/")
+  fi
+  for category in "${CATEGORIES_TO_SCAN[@]}"; do
+    [ -d "${category}skills" ] || continue
+    for skill_dir in "${category}skills"/*/; do
+      [ -d "$skill_dir" ] || continue
+      [ -f "${skill_dir}SKILL.md" ] || continue
+      skill_name="$(basename "$skill_dir")"
+      for skip in "${SKIP_SKILLS[@]}"; do
+        [[ "$skill_name" == "$skip" ]] && continue 2
+      done
+      seen=false
+      for ((j=0; j<${#SKILL_NAMES[@]}; j++)); do
+        [[ "${SKILL_NAMES[$j]}" == "$skill_name" ]] && { seen=true; break; }
+      done
+      if [[ "$seen" != true ]]; then
+        SKILL_NAMES+=( "$skill_name" )
+        SKILL_CATEGORIES+=( "$(basename "$category")" )
+      fi
     done
-    seen=false
-    for ((j=0; j<${#SKILL_NAMES[@]}; j++)); do
-      [[ "${SKILL_NAMES[$j]}" == "$skill_name" ]] && { seen=true; break; }
-    done
-    if [[ "$seen" != true ]]; then
-      SKILL_NAMES+=( "$skill_name" )
-      SKILL_CATEGORIES+=( "$(basename "$category")" )
-    fi
   done
-done
+fi
 
 linked=0
 skipped=0
 warned=0
 
-mkdir -p "$AGENTS_SKILLS"
-for tool in "${TOOL_DIRS[@]}"; do
-  mkdir -p "$tool"
-done
+if [[ "$PROJECT_ONLY" != true ]]; then
+  mkdir -p "$AGENTS_SKILLS"
+  for tool in "${TOOL_DIRS[@]}"; do
+    mkdir -p "$tool"
+  done
 
-# Sort by skill name for stable output (temp file avoids subshell array issues on Bash 3)
-pair_count=${#SKILL_NAMES[@]}
-tmp_list=$(mktemp)
-trap 'rm -f "$tmp_list"' EXIT
-for ((i=0; i<pair_count; i++)); do
-  echo "${SKILL_NAMES[$i]}|${SKILL_CATEGORIES[$i]}"
-done > "$tmp_list"
-sort -t'|' -k1,1 "$tmp_list" -o "$tmp_list"
+  # Sort by skill name for stable output (temp file avoids subshell array issues on Bash 3)
+  pair_count=${#SKILL_NAMES[@]}
+  tmp_list=$(mktemp)
+  trap 'rm -f "$tmp_list"' EXIT
+  for ((i=0; i<pair_count; i++)); do
+    echo "${SKILL_NAMES[$i]}|${SKILL_CATEGORIES[$i]}"
+  done > "$tmp_list"
+  sort -t'|' -k1,1 "$tmp_list" -o "$tmp_list"
 
-while IFS='|' read -r skill_name category; do
-  source_dir="$FORGE_ROOT/$category/skills/$skill_name"
-  target="$AGENTS_SKILLS/$skill_name"
+  while IFS='|' read -r skill_name category; do
+    source_dir="$FORGE_ROOT/$category/skills/$skill_name"
+    target="$AGENTS_SKILLS/$skill_name"
 
   if [[ -L "$target" ]]; then
     if [[ "$FORCE" == true ]]; then
@@ -193,84 +252,89 @@ while IFS='|' read -r skill_name category; do
       echo "  -> $tool_skill"
     fi
   done
-done < "$tmp_list"
+  done < "$tmp_list"
 
-# --- Clean: remove skills not in current install set (--clean) ---
-if [[ "$CLEAN" == true ]]; then
-  cleaned_agents=0
-  cleaned_tools=0
-  for entry in "$AGENTS_SKILLS"/*; do
-    [[ -e "$entry" ]] || continue
-    name=$(basename "$entry")
-    in_list=false
-    for ((i=0; i<${#SKILL_NAMES[@]}; i++)); do
-      [[ "${SKILL_NAMES[$i]}" == "$name" ]] && { in_list=true; break; }
-    done
-    keep=false
-    if [[ "$in_list" == true ]]; then
-      if [[ -L "$entry" ]]; then
-        dest=$(readlink "$entry")
-        if [[ "$dest" == /* ]]; then
-          [[ "$dest" == "$FORGE_ROOT"/* ]] && keep=true
-        else
-          resolved=$(cd "$AGENTS_SKILLS" && cd "$dest" 2>/dev/null && pwd -P) || true
-          [[ -n "$resolved" && "$resolved" == "$FORGE_ROOT"/* ]] && keep=true
-        fi
-      fi
-    fi
-    if [[ "$keep" != true ]]; then
-      if [[ "$DRY_RUN" == true ]]; then
-        echo "[dry-run] would remove (not from repo): $entry"
-      else
-        rm -rf "$entry"
-        echo "removed: $name"
-      fi
-      ((cleaned_agents++)) || true
-    fi
-  done
-  for tool in "${TOOL_DIRS[@]}"; do
-    [[ -d "$tool" ]] || continue
-    for entry in "$tool"/*; do
+  # --- Clean: remove skills not in current install set (--clean) ---
+  if [[ "$CLEAN" == true ]]; then
+    cleaned_agents=0
+    cleaned_tools=0
+    for entry in "$AGENTS_SKILLS"/*; do
       [[ -e "$entry" ]] || continue
       name=$(basename "$entry")
       in_list=false
       for ((i=0; i<${#SKILL_NAMES[@]}; i++)); do
         [[ "${SKILL_NAMES[$i]}" == "$name" ]] && { in_list=true; break; }
       done
-      if [[ "$in_list" != true ]]; then
+      keep=false
+      if [[ "$in_list" == true ]]; then
+        if [[ -L "$entry" ]]; then
+          dest=$(readlink "$entry")
+          if [[ "$dest" == /* ]]; then
+            [[ "$dest" == "$FORGE_ROOT"/* ]] && keep=true
+          else
+            resolved=$(cd "$AGENTS_SKILLS" && cd "$dest" 2>/dev/null && pwd -P) || true
+            [[ -n "$resolved" && "$resolved" == "$FORGE_ROOT"/* ]] && keep=true
+          fi
+        fi
+      fi
+      if [[ "$keep" != true ]]; then
         if [[ "$DRY_RUN" == true ]]; then
-          echo "[dry-run] would remove from tool: $entry"
+          echo "[dry-run] would remove (not from repo): $entry"
         else
           rm -rf "$entry"
-          echo "removed from $(basename "$tool"): $name"
+          echo "removed: $name"
         fi
-        ((cleaned_tools++)) || true
+        ((cleaned_agents++)) || true
       fi
     done
-  done
-  echo "Clean: $cleaned_agents from ~/.agents/skills, $cleaned_tools from tool dirs"
-fi
+    for tool in "${TOOL_DIRS[@]}"; do
+      [[ -d "$tool" ]] || continue
+      for entry in "$tool"/*; do
+        [[ -e "$entry" ]] || continue
+        name=$(basename "$entry")
+        in_list=false
+        for ((i=0; i<${#SKILL_NAMES[@]}; i++)); do
+          [[ "${SKILL_NAMES[$i]}" == "$name" ]] && { in_list=true; break; }
+        done
+        if [[ "$in_list" != true ]]; then
+          if [[ "$DRY_RUN" == true ]]; then
+            echo "[dry-run] would remove from tool: $entry"
+          else
+            rm -rf "$entry"
+            echo "removed from $(basename "$tool"): $name"
+          fi
+          ((cleaned_tools++)) || true
+        fi
+      done
+    done
+    echo "Clean: $cleaned_agents from ~/.agents/skills, $cleaned_tools from tool dirs"
+  fi
 
-echo ""
-echo "Summary: linked=$linked skipped=$skipped warned=$warned"
+  echo ""
+  echo "Summary: linked=$linked skipped=$skipped warned=$warned"
+fi
 
 # --- Per-project install: --project DIR --bundles b1,b2 ---
 if [[ -n "$PROJECT_DIR" && -n "$BUNDLES" ]]; then
   PROJECT_ROOT="$(abspath "$PROJECT_DIR")"
   PROJECT_TOOL_DIRS=( "$PROJECT_ROOT/.cursor/skills" "$PROJECT_ROOT/.claude/skills" "$PROJECT_ROOT/.codex/skills" )
-  if [[ "$DRY_RUN" != true ]]; then
-    for tool in "${PROJECT_TOOL_DIRS[@]}"; do
-      mkdir -p "$tool"
-    done
-  fi
+  AVAILABLE_BUNDLES=()
+  for category in "$FORGE_ROOT"/*/; do
+    [[ -d "${category}skills" ]] || continue
+    AVAILABLE_BUNDLES+=( "$(basename "$category")" )
+  done
   PROJ_SKILL_NAMES=()
   PROJ_SKILL_CATEGORIES=()
+  UNKNOWN_BUNDLES=()
   IFS=',' read -ra BUNDLE_LIST <<< "$BUNDLES"
   for bundle in "${BUNDLE_LIST[@]}"; do
     bundle="${bundle// /}"
     [[ -z "$bundle" ]] && continue
     category="$FORGE_ROOT/$bundle"
-    [[ -d "$category/skills" ]] || continue
+    if [[ ! -d "$category/skills" ]]; then
+      UNKNOWN_BUNDLES+=( "$bundle" )
+      continue
+    fi
     for skill_dir in "$category/skills"/*/; do
       [ -d "$skill_dir" ] || continue
       [ -f "${skill_dir}SKILL.md" ] || continue
@@ -288,6 +352,24 @@ if [[ -n "$PROJECT_DIR" && -n "$BUNDLES" ]]; then
       fi
     done
   done
+  if [[ ${#UNKNOWN_BUNDLES[@]} -gt 0 ]]; then
+    echo ""
+    echo "Unknown bundles requested:"
+    for bundle in "${UNKNOWN_BUNDLES[@]}"; do
+      echo "  - $bundle"
+    done
+    echo ""
+    echo "Available bundles:"
+    for bundle in "${AVAILABLE_BUNDLES[@]}"; do
+      echo "  - $bundle"
+    done
+    exit 1
+  fi
+  if [[ "$DRY_RUN" != true ]]; then
+    for tool in "${PROJECT_TOOL_DIRS[@]}"; do
+      mkdir -p "$tool"
+    done
+  fi
   proj_linked=0
   proj_skipped=0
   proj_warned=0
@@ -336,10 +418,16 @@ fi
 
 # --- Optional primitives (bundles: rules, MCP, agents, hooks) ---
 
+dir_has_non_gitkeep_files() {
+  local dir="$1"
+  find "$dir" -type f ! -name ".gitkeep" -print -quit | grep -q .
+}
+
 install_bundle_primitive() {
   local kind="$1"    # mcp, rules, agents, commands, tasks
   local dest_base="$2"
   local count=0
+  local skipped_empty=0
   for category in "$FORGE_ROOT"/*/; do
     [ -d "$category" ] || continue
     local name
@@ -353,6 +441,17 @@ install_bundle_primitive() {
       tasks)    src="${category}tasks";    [ -d "$src" ] || continue ;;
       *)        continue ;;
     esac
+    if [[ "$kind" == "rules" || "$kind" == "agents" || "$kind" == "commands" || "$kind" == "tasks" ]]; then
+      if ! dir_has_non_gitkeep_files "$src"; then
+        if [[ "$DRY_RUN" == true ]]; then
+          echo "[dry-run] skip empty $kind bundle: $name"
+        else
+          echo "skip empty $kind bundle: $name"
+        fi
+        ((skipped_empty++)) || true
+        continue
+      fi
+    fi
     local dest="${dest_base}/${name}"
     if [[ "$kind" == "mcp" ]]; then
       dest="${dest_base}/${name}.json"
@@ -369,6 +468,9 @@ install_bundle_primitive() {
     fi
     ((count++)) || true
   done
+  if [[ "$skipped_empty" -gt 0 ]]; then
+    echo "$kind: skipped $skipped_empty empty bundle(s)"
+  fi
   if [[ $count -gt 0 ]] && [[ "$DRY_RUN" != true ]] && [[ "$kind" == "mcp" ]]; then
     if command -v jq >/dev/null 2>&1 && [[ -d "$AGENTS_MCP_D" ]]; then
       local merged

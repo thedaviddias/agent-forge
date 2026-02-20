@@ -1,6 +1,6 @@
 ---
 name: plausible
-description: Access Plausible Analytics for website traffic stats. Use for checking visitor counts, pageviews, top sources, and traffic trends across my  sites.
+description: Access Plausible Analytics for website traffic stats. Use when checking visitor counts, pageviews, top sources, and traffic trends across sites.
 ---
 
 # Plausible Analytics Skill

@@ -12,6 +12,7 @@ From the repo root, run:
 ./install.sh                    # default: only global/ skills → ~/.agents/skills and tool dirs
 ./install.sh --all-bundles      # install skills from all bundles globally (web, marketing, etc.)
 ./install.sh --project . --bundles web,marketing   # install selected bundles into a project's .cursor/skills
+./install.sh --project . --bundles web --project-only  # project-only install, skip global ~/.agents writes
 ./install.sh --all              # install all primitives (skills + rules + MCP + agents + hooks)
 ./install.sh --with-mcp         # skills + MCP configs (~/.agents/mcp.d/ and merged ~/.agents/mcp.json)
 ./install.sh --with-rules       # skills + bundle rules (~/.agents/rules/)
@@ -28,13 +29,14 @@ From the repo root, run:
 - **Default**: only skills from the **global/** bundle are installed to `~/.agents/skills` and symlinked into `~/.cursor/skills`, `~/.claude/skills`, `~/.codex/skills`. Other bundles (web, marketing, etc.) are not installed globally.
 - **All bundles** (`--all-bundles`): install skills from every bundle globally (previous default behavior).
 - **Per-project** (`--project DIR --bundles web,marketing`): install the listed bundles into `DIR/.cursor/skills` (and `.claude/skills`, `.codex/skills`) as symlinks to this repo. Use from a project to get only the skills that project needs; Cursor and other tools merge project-level skills with your global skills.
+- **Project-only** (`--project-only`): run only the per-project install path and skip all writes to `~/.agents`.
 - **Dry-run** (`--dry-run`): prints every link that would be created and a summary; does not create or change anything.
 - **Force** (`--force`): replaces existing symlinks and real directories with symlinks into this repo.
 - **Clean** (`--clean`): after linking, remove any skill in `~/.agents/skills` (and tool dirs) that is not in the current install set (global-only by default, or all bundles if you used `--all-bundles`).
 
 ## Bundle contract
 
-Each top-level category (`global/`, `openclaw/`, `web-development/`, etc.) is a **bundle** that can contain:
+Each top-level category (`global/`, `web/`, `mobile/`, `game/`, `marketing/`, `openclaw/`, `others/`) is a **bundle** that can contain:
 
 | Primitive | Location | Cursor | Claude | Codex |
 |-----------|----------|--------|--------|-------|
@@ -140,3 +142,12 @@ With [Lefthook](https://github.com/evilmartians/lefthook) you can run checks bef
 2. Install Lefthook: `lefthook install` (from repo root).
 
 After that, commits that touch skills will run skill validation, and every commit will be scanned for secrets; if Gitleaks finds a secret, the commit is blocked. No Homebrew or manual binary install required.
+
+## Quality commands
+
+```bash
+pnpm run validate-skills   # strict skill contract checks
+pnpm run check:links       # broken local Markdown links
+pnpm run validate:all      # validate-skills + link checks + secret scan
+pnpm run report:skills     # regenerate docs/SKILL-HEALTH.md and reports/skills-health.json
+```
