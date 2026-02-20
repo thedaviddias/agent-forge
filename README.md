@@ -42,6 +42,12 @@ Each top-level category (`global/`, `openclaw/`, `web-development/`, etc.) is a 
 
 See [docs/BUNDLE-ARCHITECTURE.md](docs/BUNDLE-ARCHITECTURE.md) for the full layout, cross-tool comparison, and how `~/.agents/` is used as the canonical home for all primitives.
 
+To scaffold a new category with the standard folders (`skills/`, `rules/`, `commands/`, `agents/`, `tasks/`), run:
+
+```bash
+./scaffold-category.sh <category-name>
+```
+
 ## What each folder is for (and how AI tools use it)
 
 Each bundle can contain these folders (and files). Here’s what they do and which tools use them:
@@ -57,6 +63,10 @@ Each bundle can contain these folders (and files). Here’s what they do and whi
 | **hooks/** or **hooks.json** | Lifecycle automation: run scripts or inject prompts on events (e.g. before commit, on session start). | **Cursor**: Plugins can use `hooks.json` (e.g. pre-commit checks). **Claude Code**: Hooks in config for events like session start. **Codex**: No standard hooks folder in the same way. |
 
 After you run `./install.sh --all`, everything is linked under `~/.agents/` (e.g. `~/.agents/skills`, `~/.agents/rules`, `~/.agents/commands`). Tools that use their own paths (e.g. `~/.cursor/skills`) are already symlinked from there for skills; for rules, commands, and MCP you may need to point the tool at `~/.agents/` or symlink/copy into the tool’s expected location (see [docs/BUNDLE-ARCHITECTURE.md](docs/BUNDLE-ARCHITECTURE.md)).
+
+### Tool-agnostic skills
+
+Skills in this repo are written to work with any agent (Cursor, Claude, Codex). Avoid tool-specific wording in descriptions and prerequisites; use a **Tool setup** or **Per-tool notes** section when setup differs by tool. Use **skill root** or relative paths (`scripts/...`) instead of `CODEX_HOME` or `~/.codex/skills`. Tool-specific assets (e.g. `agents/openai.yaml` for Codex) are optional and referenced from `SKILL.md` so the main instructions stay agnostic.
 
 ## Structure
 
