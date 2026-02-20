@@ -1,0 +1,17 @@
+# Extend default gitleaks rules; add path allowlist for docs that quote secret names as examples.
+# See: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+[extend]
+useDefault = true
+
+# Paths where "secret" patterns are documentation/examples, not real credentials.
+[allowlist]
+description = "agent-forge: security reference docs and example snippets"
+paths = [
+  # Security best-practices and threat-model references that quote SECRET_KEY, client_secret, etc.
+  '''web/skills/security-best-practices/references/.*\.md$''',
+  '''web/skills/security-threat-model/references/.*\.md$''',
+  # 1password-cli skill shows op:// and example placeholders
+  '''global/skills/1password-cli/.*''',
+  # PDF skill example with placeholder password
+  '''global/skills/pdf/.*''',
+]

@@ -1,0 +1,12 @@
+# Optional: install with lefthook install. Validates skills on commit when */skills/** change.
+# Strict by default (body ≤500 lines); skills in scripts/skills-strict-allowlist.txt are allowed until refactored.
+# detect-secrets: runs on every commit (any staged file) to block commits containing hardcoded secrets.
+pre-commit:
+  parallel: false
+  commands:
+    detect-secrets:
+      glob: "**"
+      run: pnpm exec gitleaks-secret-scanner --verbose -c .gitleaks.toml
+    validate-skills:
+      glob: "*/skills/**/*.md"
+      run: node scripts/validate-skills.mjs

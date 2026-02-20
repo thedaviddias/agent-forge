@@ -101,6 +101,7 @@ It checks:
 - `name` matches the skill directory and uses only `a-z`, `0-9`, `-` (per [spec](https://agentskills.io/specification))
 - `description` length ≤ 1024 characters
 - **Body ≤ 500 lines** (default). Skills listed in `scripts/skills-strict-allowlist.txt` (one `category/skill-name` per line) are allowed to exceed 500 lines until refactored; remove a line after moving content to `references/`.
+- **Formatting:** frontmatter field order (`name` before `description`); file must end with a single newline . **Warnings** (do not fail): description very short or missing “use when” phrasing; broken links to `references/*.md`.
 
 ### Structural reporting
 

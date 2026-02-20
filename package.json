@@ -1,0 +1,14 @@
+{
+  "name": "agent-forge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Curated primitives for LLMs and AI agents — skills, rules, MCP, agents, hooks",
+  "packageManager": "pnpm@9.14.2",
+  "scripts": {
+    "validate-skills": "node scripts/validate-skills.mjs",
+    "scan:secrets": "gitleaks-secret-scanner --verbose -c .gitleaks.toml"
+  },
+  "devDependencies": {
+    "gitleaks-secret-scanner": "^2.1.1"
+  }
+}

@@ -1,0 +1,35 @@
+# Environment and secrets — never commit
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+*.secret
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Dependencies and build
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+.next/
+out/
+
+# Logs and cache
+*.log
+.cache/
+.parcel-cache/

@@ -126,3 +126,17 @@ Detailed description of the skill's purpose and capabilities.
 - Test across Claude.ai, Claude Code, Cursor, and API
 - Document prerequisites and dependencies
 - Include error handling guidance
+
+## Pre-commit hooks (optional)
+
+With [Lefthook](https://github.com/evilmartians/lefthook) you can run checks before each commit:
+
+- **validate-skills**: when `*/skills/**/*.md` change — enforces SKILL.md frontmatter, description length, and body line limit.
+- **detect-secrets**: on every commit — blocks commits that contain hardcoded secrets (API keys, tokens, private keys, etc.) via [Gitleaks](https://github.com/gitleaks/gitleaks).
+
+**Setup:**
+
+1. Install dependencies (includes [Gitleaks](https://github.com/gitleaks/gitleaks) via [gitleaks-secret-scanner](https://www.npmjs.com/package/gitleaks-secret-scanner), which downloads the correct binary for your OS): `pnpm install`
+2. Install Lefthook: `lefthook install` (from repo root).
+
+After that, commits that touch skills will run skill validation, and every commit will be scanned for secrets; if Gitleaks finds a secret, the commit is blocked. No Homebrew or manual binary install required.
