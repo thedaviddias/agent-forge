@@ -1,0 +1,185 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+📘 SwiftUI State Management in Swift 6
+
+SwiftUI’s declarative nature emphasizes a clear separation between data and UI. With Swift 6, state management has evolved, introducing new property wrappers and refining existing ones to streamline data flow and UI updates.
+
+⸻
+
+🔑 Key Property Wrappers
+
+1. @State
+
+Manages local, mutable state within a view. Ideal for simple, view-specific data.
+
+struct CounterView: View {
+    @State private var count = 0
+
+    var body: some View {
+        VStack {
+            Text("Count: \(count)")
+            Button("Increment") {
+                count += 1
+            }
+        }
+    }
+}
+
+Best Practices:
+	•	Use for transient, view-local state.
+	•	Avoid using with reference types; prefer value types.
+	•	Keep @State properties private to the view.
+
+2. @Binding
+
+Creates a two-way connection between a parent and child view, allowing the child to read and write to the parent’s state.
+
+struct ParentView: View {
+    @State private var isOn = false
+
+    var body: some View {
+        ToggleView(isOn: $isOn)
+    }
+}
+
+struct ToggleView: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle("Toggle", isOn: $isOn)
+    }
+}
+
+Best Practices:
+	•	Use to pass state down the view hierarchy.
+	•	Maintain a clear separation of concerns between parent and child views.
+
+3. @StateObject
+
+Introduced in SwiftUI to manage the lifecycle of observable objects owned by a view. Ensures the object is created once and persists across view updates.
+
+class UserSettings: ObservableObject {
+    @Published var username: String = "JohnDoe"
+}
+
+struct SettingsView: View {
+    @StateObject var settings = UserSettings()
+
+    var body: some View {
+        Text("Username: \(settings.username)")
+    }
+}
+
+Best Practices:
+	•	Use when the view owns the observable object.
+	•	Ensures the object isn’t recreated on view updates.
+
+1. @ObservedObject
+
+Used when a view depends on an external observable object. The view updates when the object’s @Published properties change. ￼
+
+struct ProfileView: View {
+    @ObservedObject var settings: UserSettings
+
+    var body: some View {
+        Text("Username: \(settings.username)")
+    }
+}
+
+Best Practices:
+	•	Use when the observable object is created outside the view.
+	•	Avoid using in parent views where @StateObject is more appropriate. ￼
+
+5. @EnvironmentObject
+
+Allows sharing of observable objects across the view hierarchy without explicit parameter passing. ￼
+
+class UserPreferences: ObservableObject {
+    @Published var prefersDarkMode = false
+}
+
+struct ContentView: View {
+    @EnvironmentObject var preferences: UserPreferences
+
+    var body: some View {
+        Text("Dark Mode: \(preferences.prefersDarkMode ? "On" : "Off")")
+    }
+}
+
+Best Practices:
+	•	Use for global state shared across many views.
+	•	Ensure the environment object is injected into the view hierarchy.
+
+1. @Environment
+
+Accesses system-provided values or custom values injected into the environment.
+
+struct ThemedView: View {
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        Text("Current theme: \(colorScheme == .dark ? "Dark" : "Light")")
+    }
+}
+
+Best Practices:
+	•	Use for system values like colorScheme, locale, etc.
+	•	Inject custom values using .environment modifier.
+
+1. @AppStorage
+
+Provides a way to read and write values to UserDefaults, keeping the UI in sync with stored data.
+
+struct SettingsView: View {
+    @AppStorage("username") var username: String = "Guest"
+
+    var body: some View {
+        TextField("Username", text: $username)
+    }
+}
+
+Best Practices:
+	•	Use for simple, persistent user settings.
+	•	Avoid storing complex data structures.
+
+⸻
+
+⚙️ Advanced: Swift 6’s @Observable and @Bindable
+
+With Swift 6, the new @Observable macro simplifies the creation of observable models by automatically synthesizing the necessary conformance.
+
+@Observable
+class PostsViewModel {
+    var posts: [Post] = []
+}
+
+In views, @Bindable allows for two-way bindings to properties of an observable object.
+
+struct PostsView: View {
+    @Bindable var viewModel: PostsViewModel
+
+    var body: some View {
+        List($viewModel.posts) { $post in
+            Text(post.title)
+        }
+    }
+}
+
+Best Practices:
+	•	Use @Observable to reduce boilerplate in your models.
+	•	Use @Bindable for seamless two-way bindings in views.
+
+⸻
+
+🧠 Best Practices Summary
+	•	Use @State for simple, local state.
+	•	Use @Binding to pass state between parent and child views.
+	•	Use @StateObject when a view owns an observable object.
+	•	Use @ObservedObject for external observable objects.
+	•	Use @EnvironmentObject for shared, global state.
+	•	Use @Environment for system or injected values.
+	•	Use @AppStorage for simple, persistent settings.
+	•	Adopt @Observable and @Bindable in Swift 6 for streamlined state management.

@@ -1,0 +1,121 @@
+---
+alwaysApply: true
+---
+# Component Reuse & UI Pattern Rules
+
+## CRITICAL: Component Discovery First
+- **NEVER create new UI components without first searching for existing ones**
+- **ALWAYS check /UI/Components/ folders before implementing new UI**
+- **MANDATORY: Search for existing design patterns before creating new ones**
+
+## Required Component Search Process
+Before creating ANY UI component, you MUST:
+
+1. **Search existing components first:**
+   - Use `codebase_search` to find existing button/card/modal components
+   - Use `file_search` to look for specific component names
+   - Use `grep_search` to find component patterns (e.g., "struct.*Button")
+
+2. **Check component directories:**
+   - `/UI/Components/Buttons/` - for button components
+   - `/UI/Components/Common/` - for shared components
+   - `/UI/Components/Cards/` - for card components
+   - `/UI/Components/Status/` - for status/empty state components
+
+3. **Look for similar functionality:**
+   - How are other similar features implemented?
+   - What existing services/managers can be reused?
+   - Are there existing design patterns to follow?
+
+## Component Reuse Guidelines
+
+### Existing Components to Reuse:
+- **FilterPill** - for button-like selectable items
+- **EmptyStateView** - for empty states with icon/title/subtitle
+- **SearchBar** - for search functionality
+- **AppColorScheme** - for all color usage
+- **CityGuidesService** - for city-related data
+- **LocationManager** - for location services
+
+### When You Find Existing Components:
+- **Propose reuse explicitly:** "I found FilterPill which seems perfect for this use case"
+- **Explain why it fits:** "FilterPill has the exact styling and behavior needed"
+- **Avoid custom implementations:** Don't create new components when existing ones work
+
+### When You CAN'T Find Existing Components:
+- **Ask explicitly:** "I couldn't find existing button components, should I create one or did I miss something?"
+- **Double-check search:** Use different search terms and approaches
+- **Consider variations:** Maybe there's a similar component that can be extended
+
+## Anti-Patterns to Avoid
+
+### DON'T:
+- Create custom button designs when FilterPill exists
+- Recreate EmptyStateView with different parameters
+- Build new services when existing ones can be extended
+- Copy-paste similar UI code from other files
+- Create hardcoded color values instead of using AppColorScheme
+
+### DO:
+- Search thoroughly before implementing
+- Reuse existing components with proper parameters
+- Extend existing services rather than creating new ones
+- Follow established design patterns in the codebase
+- Use existing color schemes and styling patterns
+
+## Implementation Process
+
+1. **Discovery Phase:**
+   ```
+   codebase_search: "What button components exist in the UI?"
+   codebase_search: "How are similar features implemented?"
+   file_search: "FilterPill"
+   grep_search: "struct.*Button"
+   ```
+
+2. **Analysis Phase:**
+   - Can existing components be used as-is?
+   - Do they need minor modifications?
+   - Are there existing patterns to follow?
+
+3. **Implementation Phase:**
+   - Use existing components with proper parameters
+   - Follow established patterns for new components
+   - Extend existing services rather than creating new ones
+
+4. **Validation Phase:**
+   - Does this maintain design consistency?
+   - Are we reusing maximum existing code?
+   - Could another developer easily understand this approach?
+
+## Design System Consistency
+
+- **Colors:** Always use AppColorScheme, never hardcoded colors
+- **Spacing:** Follow existing padding/margin patterns
+- **Typography:** Use established font sizes and weights
+- **Icons:** Reuse existing SF Symbols and icon patterns
+- **Animations:** Follow existing transition patterns
+
+## Error Recovery
+
+If you catch yourself creating new components:
+1. **STOP immediately**
+2. **Search for existing alternatives**
+3. **Propose reuse of existing components**
+4. **Only proceed with new components if truly necessary**
+
+## Questions to Ask Yourself
+
+Before any UI implementation:
+- "What similar UI already exists in this app?"
+- "Can I reuse an existing component for this?"
+- "Am I following established patterns?"
+- "Would this be consistent with the existing design system?"
+
+---
+
+**Remember: The goal is to maintain consistency and avoid code duplication. Always favor reuse over recreation.**
+description:
+globs:
+alwaysApply: false
+---
