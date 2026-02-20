@@ -26,27 +26,50 @@ abspath() {
 # Parse flags
 FORCE=false
 DRY_RUN=false
+CLEAN=false
+ALL_BUNDLES=false
+PROJECT_DIR=""
+BUNDLES=""
 WITH_MCP=false
 WITH_RULES=false
 WITH_AGENTS=false
 WITH_HOOKS=false
 WITH_COMMANDS=false
 WITH_TASKS=false
-for arg in "$@"; do
+while [[ $# -gt 0 ]]; do
+  arg="$1"
   case "$arg" in
-    --force)          FORCE=true ;;
-    --dry-run)        DRY_RUN=true ;;
-    --all)            WITH_MCP=true; WITH_RULES=true; WITH_AGENTS=true; WITH_HOOKS=true; WITH_COMMANDS=true; WITH_TASKS=true ;;
-    --with-mcp)       WITH_MCP=true ;;
-    --with-rules)     WITH_RULES=true ;;
-    --with-agents)    WITH_AGENTS=true ;;
-    --with-hooks)     WITH_HOOKS=true ;;
-    --with-commands)  WITH_COMMANDS=true ;;
-    --with-tasks)     WITH_TASKS=true ;;
+    --force)          FORCE=true; shift ;;
+    --dry-run)        DRY_RUN=true; shift ;;
+    --clean)          CLEAN=true; shift ;;
+    --all-bundles)    ALL_BUNDLES=true; shift ;;
+    --project)
+      PROJECT_DIR="${2:-}"; shift 2
+      ;;
+    --project=*)
+      PROJECT_DIR="${arg#*=}"; shift
+      ;;
+    --bundles)
+      BUNDLES="${2:-}"; shift 2
+      ;;
+    --bundles=*)
+      BUNDLES="${arg#*=}"; shift
+      ;;
+    --all)            WITH_MCP=true; WITH_RULES=true; WITH_AGENTS=true; WITH_HOOKS=true; WITH_COMMANDS=true; WITH_TASKS=true; shift ;;
+    --with-mcp)       WITH_MCP=true; shift ;;
+    --with-rules)     WITH_RULES=true; shift ;;
+    --with-agents)    WITH_AGENTS=true; shift ;;
+    --with-hooks)     WITH_HOOKS=true; shift ;;
+    --with-commands)  WITH_COMMANDS=true; shift ;;
+    --with-tasks)     WITH_TASKS=true; shift ;;
     -h|--help)
-      echo "Usage: $0 [--force] [--dry-run] [--all | --with-mcp | --with-rules | --with-agents | --with-hooks | --with-commands | --with-tasks]"
-      echo "  --force          Overwrite existing symlinks and replace real directories in ~/.agents/skills"
+      echo "Usage: $0 [--force] [--dry-run] [--clean] [--all-bundles] [--project DIR --bundles b1,b2] [--all | --with-mcp | ...]"
+      echo "  --force          Overwrite existing symlinks and replace real directories in ~/.agents/skills (or project dir)"
       echo "  --dry-run        Print actions without creating or changing anything"
+      echo "  --clean          Remove skills in ~/.agents/skills (and tool dirs) that are not in the current install set"
+      echo "  --all-bundles    Install skills from all bundles globally (default: only global/ bundle)"
+      echo "  --project DIR   Install selected bundles into DIR/.cursor/skills (and .claude/skills, .codex/skills)"
+      echo "  --bundles b1,b2  Comma-separated bundle names for --project (e.g. web,marketing)"
       echo "  --all            Install all primitives (skills + rules + MCP + agents + hooks + commands + tasks)"
       echo "  --with-mcp       Also install MCP configs to ~/.agents/mcp.d/ and merge to ~/.agents/mcp.json"
       echo "  --with-rules     Also install bundle rules to ~/.agents/rules/"
@@ -55,8 +78,13 @@ for arg in "$@"; do
       echo "  --with-commands  Also install bundle commands to ~/.agents/commands/"
       echo "  --with-tasks     Also install bundle tasks to ~/.agents/tasks/"
       echo ""
-      echo "By default only skills are installed (unchanged behavior)."
+      echo "By default only global/ skills are installed to ~/.agents/skills and tool dirs. Use --all-bundles for all bundles."
+      echo "Use --project DIR --bundles web,marketing to install those bundles into a project's .cursor/skills."
+      echo "Existing same-name: skip unless --force. Use --clean to leave only repo skills in the current install set."
       exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg" >&2; exit 1
       ;;
   esac
 done
@@ -64,9 +92,15 @@ done
 FORGE_ROOT="$(abspath "$(dirname "$0")")"
 
 # Discover all skills: (skill_name,category) pairs, first category wins if duplicate name
+# Default: only global/ bundle. Use --all-bundles to install every bundle globally.
 SKILL_NAMES=()
 SKILL_CATEGORIES=()
-for category in "$FORGE_ROOT"/*/; do
+if [[ "$ALL_BUNDLES" == true ]]; then
+  CATEGORIES_TO_SCAN=("$FORGE_ROOT"/*/)
+else
+  CATEGORIES_TO_SCAN=("$FORGE_ROOT/global/")
+fi
+for category in "${CATEGORIES_TO_SCAN[@]}"; do
   [ -d "${category}skills" ] || continue
   for skill_dir in "${category}skills"/*/; do
     [ -d "$skill_dir" ] || continue
@@ -161,8 +195,144 @@ while IFS='|' read -r skill_name category; do
   done
 done < "$tmp_list"
 
+# --- Clean: remove skills not in current install set (--clean) ---
+if [[ "$CLEAN" == true ]]; then
+  cleaned_agents=0
+  cleaned_tools=0
+  for entry in "$AGENTS_SKILLS"/*; do
+    [[ -e "$entry" ]] || continue
+    name=$(basename "$entry")
+    in_list=false
+    for ((i=0; i<${#SKILL_NAMES[@]}; i++)); do
+      [[ "${SKILL_NAMES[$i]}" == "$name" ]] && { in_list=true; break; }
+    done
+    keep=false
+    if [[ "$in_list" == true ]]; then
+      if [[ -L "$entry" ]]; then
+        dest=$(readlink "$entry")
+        if [[ "$dest" == /* ]]; then
+          [[ "$dest" == "$FORGE_ROOT"/* ]] && keep=true
+        else
+          resolved=$(cd "$AGENTS_SKILLS" && cd "$dest" 2>/dev/null && pwd -P) || true
+          [[ -n "$resolved" && "$resolved" == "$FORGE_ROOT"/* ]] && keep=true
+        fi
+      fi
+    fi
+    if [[ "$keep" != true ]]; then
+      if [[ "$DRY_RUN" == true ]]; then
+        echo "[dry-run] would remove (not from repo): $entry"
+      else
+        rm -rf "$entry"
+        echo "removed: $name"
+      fi
+      ((cleaned_agents++)) || true
+    fi
+  done
+  for tool in "${TOOL_DIRS[@]}"; do
+    [[ -d "$tool" ]] || continue
+    for entry in "$tool"/*; do
+      [[ -e "$entry" ]] || continue
+      name=$(basename "$entry")
+      in_list=false
+      for ((i=0; i<${#SKILL_NAMES[@]}; i++)); do
+        [[ "${SKILL_NAMES[$i]}" == "$name" ]] && { in_list=true; break; }
+      done
+      if [[ "$in_list" != true ]]; then
+        if [[ "$DRY_RUN" == true ]]; then
+          echo "[dry-run] would remove from tool: $entry"
+        else
+          rm -rf "$entry"
+          echo "removed from $(basename "$tool"): $name"
+        fi
+        ((cleaned_tools++)) || true
+      fi
+    done
+  done
+  echo "Clean: $cleaned_agents from ~/.agents/skills, $cleaned_tools from tool dirs"
+fi
+
 echo ""
 echo "Summary: linked=$linked skipped=$skipped warned=$warned"
+
+# --- Per-project install: --project DIR --bundles b1,b2 ---
+if [[ -n "$PROJECT_DIR" && -n "$BUNDLES" ]]; then
+  PROJECT_ROOT="$(abspath "$PROJECT_DIR")"
+  PROJECT_TOOL_DIRS=( "$PROJECT_ROOT/.cursor/skills" "$PROJECT_ROOT/.claude/skills" "$PROJECT_ROOT/.codex/skills" )
+  if [[ "$DRY_RUN" != true ]]; then
+    for tool in "${PROJECT_TOOL_DIRS[@]}"; do
+      mkdir -p "$tool"
+    done
+  fi
+  PROJ_SKILL_NAMES=()
+  PROJ_SKILL_CATEGORIES=()
+  IFS=',' read -ra BUNDLE_LIST <<< "$BUNDLES"
+  for bundle in "${BUNDLE_LIST[@]}"; do
+    bundle="${bundle// /}"
+    [[ -z "$bundle" ]] && continue
+    category="$FORGE_ROOT/$bundle"
+    [[ -d "$category/skills" ]] || continue
+    for skill_dir in "$category/skills"/*/; do
+      [ -d "$skill_dir" ] || continue
+      [ -f "${skill_dir}SKILL.md" ] || continue
+      skill_name="$(basename "$skill_dir")"
+      for skip in "${SKIP_SKILLS[@]}"; do
+        [[ "$skill_name" == "$skip" ]] && continue 2
+      done
+      seen=false
+      for ((j=0; j<${#PROJ_SKILL_NAMES[@]}; j++)); do
+        [[ "${PROJ_SKILL_NAMES[$j]}" == "$skill_name" ]] && { seen=true; break; }
+      done
+      if [[ "$seen" != true ]]; then
+        PROJ_SKILL_NAMES+=( "$skill_name" )
+        PROJ_SKILL_CATEGORIES+=( "$bundle" )
+      fi
+    done
+  done
+  proj_linked=0
+  proj_skipped=0
+  proj_warned=0
+  for ((i=0; i<${#PROJ_SKILL_NAMES[@]}; i++)); do
+    skill_name="${PROJ_SKILL_NAMES[$i]}"
+    category="${PROJ_SKILL_CATEGORIES[$i]}"
+    source_dir="$FORGE_ROOT/$category/skills/$skill_name"
+    for tool in "${PROJECT_TOOL_DIRS[@]}"; do
+      target="$tool/$skill_name"
+      if [[ -L "$target" ]]; then
+        if [[ "$FORCE" == true ]]; then
+          if [[ "$DRY_RUN" == true ]]; then
+            echo "[dry-run] would overwrite project symlink: $target -> $source_dir"
+          else
+            rm "$target"
+            ln -s "$source_dir" "$target"
+          fi
+          ((proj_linked++)) || true
+        else
+          ((proj_skipped++)) || true
+        fi
+      elif [[ -d "$target" ]]; then
+        if [[ "$FORCE" == true ]]; then
+          if [[ "$DRY_RUN" == true ]]; then
+            echo "[dry-run] would replace with project symlink: $target -> $source_dir"
+          else
+            rm -r "$target"
+            ln -s "$source_dir" "$target"
+          fi
+          ((proj_linked++)) || true
+        else
+          ((proj_warned++)) || true
+        fi
+      else
+        if [[ "$DRY_RUN" == true ]]; then
+          echo "[dry-run] would link project: $target -> $source_dir"
+        else
+          ln -s "$source_dir" "$target"
+        fi
+        ((proj_linked++)) || true
+      fi
+    done
+  done
+  echo "Project $PROJECT_ROOT: linked=$proj_linked skipped=$proj_skipped warned=$proj_warned"
+fi
 
 # --- Optional primitives (bundles: rules, MCP, agents, hooks) ---
 

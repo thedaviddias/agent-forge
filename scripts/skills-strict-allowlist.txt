@@ -1,0 +1,3 @@
+# Skills allowed to exceed 500 body lines until refactored to references/.
+# One "category/skill-name" per line. Remove a line after refactoring that skill.
+# Run: node scripts/validate-skills.mjs (strict by default)

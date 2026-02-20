@@ -9,22 +9,28 @@ This repo is open source. Feel free to use, adapt, or fork anything here.
 From the repo root, run:
 
 ```bash
-./install.sh              # skills only (default): symlink into ~/.agents/skills and ~/.cursor, ~/.claude, ~/.codex
-./install.sh --all        # install all primitives (skills + rules + MCP + agents + hooks)
-./install.sh --with-mcp   # skills + MCP configs (~/.agents/mcp.d/ and merged ~/.agents/mcp.json)
-./install.sh --with-rules # skills + bundle rules (~/.agents/rules/)
-./install.sh --with-agents   # skills + bundle agents (~/.agents/agents/)
-./install.sh --with-hooks     # skills + bundle hooks (~/.agents/hooks/)
-./install.sh --with-commands # skills + bundle commands (~/.agents/commands/)
-./install.sh --with-tasks    # skills + bundle tasks (~/.agents/tasks/)
-./install.sh --dry-run       # show what would be done, no changes
-./install.sh --force      # overwrite existing symlinks and replace real dirs in ~/.agents/skills
-./install.sh -h           # help
+./install.sh                    # default: only global/ skills → ~/.agents/skills and tool dirs
+./install.sh --all-bundles      # install skills from all bundles globally (web, marketing, etc.)
+./install.sh --project . --bundles web,marketing   # install selected bundles into a project's .cursor/skills
+./install.sh --all              # install all primitives (skills + rules + MCP + agents + hooks)
+./install.sh --with-mcp         # skills + MCP configs (~/.agents/mcp.d/ and merged ~/.agents/mcp.json)
+./install.sh --with-rules       # skills + bundle rules (~/.agents/rules/)
+./install.sh --with-agents      # skills + bundle agents (~/.agents/agents/)
+./install.sh --with-hooks       # skills + bundle hooks (~/.agents/hooks/)
+./install.sh --with-commands    # skills + bundle commands (~/.agents/commands/)
+./install.sh --with-tasks       # skills + bundle tasks (~/.agents/tasks/)
+./install.sh --dry-run          # show what would be done, no changes
+./install.sh --force            # overwrite existing symlinks and replace real dirs in ~/.agents/skills (or project dir)
+./install.sh --clean            # remove skills in ~/.agents/skills (and tool dirs) not in the current install set
+./install.sh -h                 # help
 ```
 
-- **Default**: only skills are installed (unchanged behavior). All primitives go to `~/.agents/`; tools symlink from there (e.g. `~/.cursor/skills` → `~/.agents/skills`).
+- **Default**: only skills from the **global/** bundle are installed to `~/.agents/skills` and symlinked into `~/.cursor/skills`, `~/.claude/skills`, `~/.codex/skills`. Other bundles (web, marketing, etc.) are not installed globally.
+- **All bundles** (`--all-bundles`): install skills from every bundle globally (previous default behavior).
+- **Per-project** (`--project DIR --bundles web,marketing`): install the listed bundles into `DIR/.cursor/skills` (and `.claude/skills`, `.codex/skills`) as symlinks to this repo. Use from a project to get only the skills that project needs; Cursor and other tools merge project-level skills with your global skills.
 - **Dry-run** (`--dry-run`): prints every link that would be created and a summary; does not create or change anything.
-- **Force** (`--force`): replaces existing symlinks and real directories in `~/.agents/skills` with symlinks into this repo.
+- **Force** (`--force`): replaces existing symlinks and real directories with symlinks into this repo.
+- **Clean** (`--clean`): after linking, remove any skill in `~/.agents/skills` (and tool dirs) that is not in the current install set (global-only by default, or all bundles if you used `--all-bundles`).
 
 ## Bundle contract
 
